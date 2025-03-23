@@ -34,3 +34,6 @@ wheels/
 
 # Логи
 *.log 
+
+# EXTRA CODE
+scripts/
