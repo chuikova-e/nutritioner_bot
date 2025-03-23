@@ -21,9 +21,11 @@ engine = create_engine(DATABASE_URL)
 # Create declarative base
 Base = declarative_base()
 
+
 class DailyData(Base):
     """Table for storing daily ChatGPT responses"""
-    __tablename__ = 'daily_data'
+
+    __tablename__ = "daily_data"
 
     # Using composite primary key of date and time
     date = Column(Date, primary_key=True)
@@ -35,9 +37,11 @@ class DailyData(Base):
     def __repr__(self):
         return f"<DailyData(date={self.date}, time={self.time}, username={self.username}, calories={self.calories})>"
 
+
 class NutritionGoals(Base):
     """Table for storing user nutrition goals"""
-    __tablename__ = 'nutrition_goals'
+
+    __tablename__ = "nutrition_goals"
 
     username = Column(String, primary_key=True)
     goals = Column(Text)
@@ -46,9 +50,11 @@ class NutritionGoals(Base):
     def __repr__(self):
         return f"<NutritionGoals(username={self.username})>"
 
+
 class WeightGoal(Base):
     """Table for storing user's target weight"""
-    __tablename__ = 'weight_goals'
+
+    __tablename__ = "weight_goals"
 
     username = Column(String, primary_key=True)
     target_weight = Column(Float)
@@ -57,9 +63,11 @@ class WeightGoal(Base):
     def __repr__(self):
         return f"<WeightGoal(username={self.username}, target_weight={self.target_weight})>"
 
+
 class WeightHistory(Base):
     """Table for storing user's weight measurements"""
-    __tablename__ = 'weight_history'
+
+    __tablename__ = "weight_history"
 
     id = Column(Integer, primary_key=True)
     username = Column(String)
@@ -69,11 +77,13 @@ class WeightHistory(Base):
     def __repr__(self):
         return f"<WeightHistory(username={self.username}, weight={self.weight}, date={self.measured_at})>"
 
+
 # Create all tables
 Base.metadata.create_all(engine)
 
 # Create session factory
 SessionLocal = sessionmaker(bind=engine)
+
 
 def extract_calories(gpt_response: str) -> float:
     """
@@ -85,7 +95,9 @@ def extract_calories(gpt_response: str) -> float:
     """
     try:
         # Ищем строки с упоминанием калорий
-        matches = re.findall(r'(\d+(?:\.\d+)?)\s*(?:к?кал|ккал|калори[йя])', gpt_response.lower())
+        matches = re.findall(
+            r"(\d+(?:\.\d+)?)\s*(?:к?кал|ккал|калори[йя])", gpt_response.lower()
+        )
         if matches:
             # Берем последнее число (обычно это общая сумма)
             return float(matches[-1])
@@ -93,6 +105,7 @@ def extract_calories(gpt_response: str) -> float:
     except Exception as e:
         logging.error(f"Error extracting calories: {str(e)}")
         return 0
+
 
 def save_gpt_response(response: str, username: str):
     """
@@ -104,10 +117,10 @@ def save_gpt_response(response: str, username: str):
     # Get current date and time in user's timezone
     tz = pytz.timezone(DEFAULT_TIMEZONE)
     now = datetime.now(tz)
-    
+
     # Extract calories from response
     calories = extract_calories(response)
-    
+
     session = SessionLocal()
     try:
         daily_data = DailyData(
@@ -115,7 +128,7 @@ def save_gpt_response(response: str, username: str):
             time=now.time(),
             username=username,
             gpt_response=response,
-            calories=calories
+            calories=calories,
         )
         session.add(daily_data)
         session.commit()
@@ -124,6 +137,7 @@ def save_gpt_response(response: str, username: str):
         raise e
     finally:
         session.close()
+
 
 def get_daily_calories(username: str, target_date: date = None) -> float:
     """
@@ -136,21 +150,26 @@ def get_daily_calories(username: str, target_date: date = None) -> float:
     """
     if target_date is None:
         target_date = datetime.now(pytz.timezone(DEFAULT_TIMEZONE)).date()
-    
+
     session = SessionLocal()
     try:
-        daily_records = session.query(DailyData)\
-            .filter(DailyData.username == username)\
-            .filter(DailyData.date == target_date)\
+        daily_records = (
+            session.query(DailyData)
+            .filter(DailyData.username == username)
+            .filter(DailyData.date == target_date)
             .all()
-        
-        total_calories = sum(record.calories for record in daily_records if record.calories is not None)
+        )
+
+        total_calories = sum(
+            record.calories for record in daily_records if record.calories is not None
+        )
         return total_calories
     except Exception as e:
         logging.error(f"Error getting daily calories: {str(e)}")
         return 0
     finally:
         session.close()
+
 
 def save_nutrition_goals(username: str, goals: str) -> bool:
     """
@@ -164,8 +183,10 @@ def save_nutrition_goals(username: str, goals: str) -> bool:
     session = SessionLocal()
     try:
         # Check if goals already exist for this user
-        existing_goals = session.query(NutritionGoals).filter_by(username=username).first()
-        
+        existing_goals = (
+            session.query(NutritionGoals).filter_by(username=username).first()
+        )
+
         if existing_goals:
             # Update existing goals
             existing_goals.goals = goals
@@ -173,12 +194,10 @@ def save_nutrition_goals(username: str, goals: str) -> bool:
         else:
             # Create new goals
             new_goals = NutritionGoals(
-                username=username,
-                goals=goals,
-                updated_at=datetime.now().date()
+                username=username, goals=goals, updated_at=datetime.now().date()
             )
             session.add(new_goals)
-        
+
         session.commit()
         return True
     except Exception as e:
@@ -187,6 +206,7 @@ def save_nutrition_goals(username: str, goals: str) -> bool:
         return False
     finally:
         session.close()
+
 
 def get_nutrition_goals(username: str) -> str:
     """
@@ -206,6 +226,7 @@ def get_nutrition_goals(username: str) -> str:
     finally:
         session.close()
 
+
 def get_all_active_users() -> list:
     """
     Get list of all users who have used the bot
@@ -214,16 +235,19 @@ def get_all_active_users() -> list:
     """
     session = SessionLocal()
     try:
-        users = session.query(DailyData.username)\
-            .distinct()\
-            .filter(DailyData.username.isnot(None))\
+        users = (
+            session.query(DailyData.username)
+            .distinct()
+            .filter(DailyData.username.isnot(None))
             .all()
+        )
         return [user[0] for user in users]
     except Exception as e:
         logging.error(f"Error getting active users: {str(e)}")
         return []
     finally:
         session.close()
+
 
 def get_daily_food_records(username: str, target_date: date = None) -> list:
     """
@@ -236,21 +260,24 @@ def get_daily_food_records(username: str, target_date: date = None) -> list:
     """
     if target_date is None:
         target_date = datetime.now(pytz.timezone(DEFAULT_TIMEZONE)).date()
-    
+
     session = SessionLocal()
     try:
-        daily_records = session.query(DailyData)\
-            .filter(DailyData.username == username)\
-            .filter(DailyData.date == target_date)\
-            .order_by(DailyData.time)\
+        daily_records = (
+            session.query(DailyData)
+            .filter(DailyData.username == username)
+            .filter(DailyData.date == target_date)
+            .order_by(DailyData.time)
             .all()
-        
+        )
+
         return [(record.time, record.gpt_response) for record in daily_records]
     except Exception as e:
         logging.error(f"Error getting daily food records: {str(e)}")
         return []
     finally:
         session.close()
+
 
 def save_weight_goal(username: str, target_weight: float) -> bool:
     """
@@ -264,7 +291,7 @@ def save_weight_goal(username: str, target_weight: float) -> bool:
     session = SessionLocal()
     try:
         existing_goal = session.query(WeightGoal).filter_by(username=username).first()
-        
+
         if existing_goal:
             existing_goal.target_weight = target_weight
             existing_goal.updated_at = datetime.now().date()
@@ -272,10 +299,10 @@ def save_weight_goal(username: str, target_weight: float) -> bool:
             new_goal = WeightGoal(
                 username=username,
                 target_weight=target_weight,
-                updated_at=datetime.now().date()
+                updated_at=datetime.now().date(),
             )
             session.add(new_goal)
-        
+
         session.commit()
         return True
     except Exception as e:
@@ -284,6 +311,7 @@ def save_weight_goal(username: str, target_weight: float) -> bool:
         return False
     finally:
         session.close()
+
 
 def get_weight_goal(username: str) -> float:
     """
@@ -303,7 +331,10 @@ def get_weight_goal(username: str) -> float:
     finally:
         session.close()
 
-def save_weight_measurement(username: str, weight: float, measured_at: date = None) -> bool:
+
+def save_weight_measurement(
+    username: str, weight: float, measured_at: date = None
+) -> bool:
     """
     Save user's weight measurement
     Args:
@@ -315,13 +346,11 @@ def save_weight_measurement(username: str, weight: float, measured_at: date = No
     """
     if measured_at is None:
         measured_at = datetime.now(pytz.timezone(DEFAULT_TIMEZONE)).date()
-    
+
     session = SessionLocal()
     try:
         measurement = WeightHistory(
-            username=username,
-            weight=weight,
-            measured_at=measured_at
+            username=username, weight=weight, measured_at=measured_at
         )
         session.add(measurement)
         session.commit()
@@ -332,6 +361,7 @@ def save_weight_measurement(username: str, weight: float, measured_at: date = No
         return False
     finally:
         session.close()
+
 
 def get_weight_history(username: str, limit: int = None) -> list:
     """
@@ -344,13 +374,15 @@ def get_weight_history(username: str, limit: int = None) -> list:
     """
     session = SessionLocal()
     try:
-        query = session.query(WeightHistory)\
-            .filter_by(username=username)\
+        query = (
+            session.query(WeightHistory)
+            .filter_by(username=username)
             .order_by(WeightHistory.measured_at.desc())
-        
+        )
+
         if limit:
             query = query.limit(limit)
-            
+
         records = query.all()
         return [(record.measured_at, record.weight) for record in records]
     except Exception as e:
@@ -358,6 +390,7 @@ def get_weight_history(username: str, limit: int = None) -> list:
         return []
     finally:
         session.close()
+
 
 def get_weekly_food_records(username: str, start_date: date) -> list:
     """
@@ -369,19 +402,21 @@ def get_weekly_food_records(username: str, start_date: date) -> list:
         list: List of GPT responses for the week
     """
     end_date = start_date + timedelta(days=7)
-    
+
     session = SessionLocal()
     try:
-        daily_records = session.query(DailyData)\
-            .filter(DailyData.username == username)\
-            .filter(DailyData.date >= start_date)\
-            .filter(DailyData.date < end_date)\
-            .order_by(DailyData.date, DailyData.time)\
+        daily_records = (
+            session.query(DailyData)
+            .filter(DailyData.username == username)
+            .filter(DailyData.date >= start_date)
+            .filter(DailyData.date < end_date)
+            .order_by(DailyData.date, DailyData.time)
             .all()
-        
+        )
+
         return [record.gpt_response for record in daily_records]
     except Exception as e:
         logging.error(f"Error getting weekly food records: {str(e)}")
         return []
     finally:
-        session.close() 
+        session.close()

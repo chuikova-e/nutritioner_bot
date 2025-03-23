@@ -15,7 +15,7 @@ TELEGRAM_FORMATTING = """Отвечай, используя только HTML-р
 - Добавляй переносы строк для удобочитаемости.  
 
 Не используй `*`, `_` или другие символы Markdown.  
-""" 
+"""
 
 # Default timezone for the application
-DEFAULT_TIMEZONE = 'Europe/Moscow' 
+DEFAULT_TIMEZONE = "Europe/Moscow"
