@@ -830,7 +830,7 @@ def main():
     # Create conversation handler for messages and photos
     message_conv_handler = ConversationHandler(
         entry_points=[
-            MessageHandler(filters.PHOTO | filters.TEXT | filters.VOICE & ~filters.COMMAND, process_message)
+            MessageHandler(filters.PHOTO | (filters.TEXT & ~filters.COMMAND) | filters.VOICE, process_message)
         ],
         states={
             AWAITING_FEEDBACK: [CallbackQueryHandler(button_callback)],
@@ -875,10 +875,14 @@ def main():
     application.add_handler(CommandHandler("goals", goals_command))
     application.add_handler(CommandHandler("calories", calories_command))
     application.add_handler(CommandHandler("analyze", analyze_command))
-    application.add_handler(message_conv_handler)
+    
+    # Регистрируем сначала обработчики конверсаций для команд
     application.add_handler(goals_conv_handler)
     application.add_handler(weight_conv_handler)
     application.add_handler(target_weight_conv_handler)
+    
+    # Регистрируем обработчик сообщений последним, чтобы он не перехватывал команды
+    application.add_handler(message_conv_handler)
 
     # Start daily summary task
     application.job_queue.run_custom(send_daily_summary, job_kwargs={"max_instances": 1})
